@@ -1,11 +1,13 @@
 #include <tuple>
-#include <iterator>
-#include <functional>
 
 template<typename ...Ts>
 class zip_iterator {
 	public:
 		using iterator_types = std::tuple<typename Ts::iterator...>;
+		using pair_type = std::pair<
+			typename std::tuple_element_t<0, std::tuple<Ts...>>::value_type&,
+			typename std::tuple_element_t<1, std::tuple<Ts...>>::value_type&
+		>;
 
 		zip_iterator(const std::tuple<typename Ts::iterator...>& iterators)
 			: _iterators(iterators)
@@ -51,14 +53,28 @@ class zip_iterator {
 		}
 
 		template<std::size_t ...I>
-		std::tuple<typename Ts::value_type&...> get_tuple_impl(
+		std::conditional_t<
+			sizeof...(Ts) == 2,
+			pair_type,
+			std::tuple<typename Ts::value_type&...>
+		> get_tuple_impl(
 			[[maybe_unused]] std::index_sequence<I...>,
 			iterator_types& t
 		) {
-			return std::tuple<typename Ts::value_type&...>(get_member(std::get<I>(t)) ...);
+			// return std::tuple<typename Ts::value_type&...>(get_member(std::get<I>(t)) ...);
+			return std::conditional_t<
+						sizeof...(Ts) == 2,
+						pair_type,
+						std::tuple<typename Ts::value_type&...>
+					>(get_member(std::get<I>(t)) ...);
 		}
 
-		std::tuple<typename Ts::value_type&...> operator*() {
+		std::conditional_t<
+			sizeof...(Ts) == 2,
+			pair_type,
+			std::tuple<typename Ts::value_type&...>
+		>
+		operator*() {
 			return get_tuple_impl(std::make_index_sequence<sizeof...(Ts)>(), _iterators);
 		}
 	private:
